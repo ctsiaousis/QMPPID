@@ -5,5 +5,5 @@ A cross-platform Qt specific parent process id parser to determine if applicatio
 ## Windows
 You need to add `LIBS += -lPsapi` to the `*.pro` or `*.pri` file.
 
-## Unix
-TODO
+## Linux
+No extra links are required.
