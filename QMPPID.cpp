@@ -67,3 +67,70 @@ bool QMPPID::getIsRunningThroughCreator()
 }
 
 #endif
+
+#ifdef Q_OS_LINUX
+
+bool QMPPID::IS_INITIALIZED = false;
+bool QMPPID::IS_RUNNING_THROUGH_CREATOR = false;
+
+pid_t QMPPID::getParentPID(pid_t pid)
+{
+    pid_t ppid = -1;
+    char buffer[BUFSIZ];
+    sprintf(buffer, "/proc/%d/stat", pid);
+    FILE *fp = fopen(buffer, "r");
+    if (fp) {
+        size_t size = fread(buffer, sizeof(char), sizeof(buffer), fp);
+        if (size > 0) {
+            strtok(buffer, " ");
+            strtok(NULL, " ");
+            strtok(NULL, " ");
+            char *s_ppid = strtok(NULL, " ");
+            ppid = atoi(s_ppid);
+        }
+        fclose(fp);
+    }
+    return ppid;
+}
+
+int QMPPID::getProcessName(pid_t pid, QString &name)
+{
+    char mname[BUFSIZ];
+    char procfile[BUFSIZ];
+    sprintf(procfile, "/proc/%d/cmdline", pid);
+    FILE *f = fopen(procfile, "r");
+    if (!f) {
+        return 1;
+    }
+    size_t size;
+    size = fread(mname, sizeof(char), sizeof(procfile), f);
+    if (size > 0) {
+        if ('\n' == mname[size - 1]) mname[size - 1] = '\0';
+    }
+    fclose(f);
+    name = QString(mname);
+    return 0;
+}
+
+#  include <QDebug>
+bool QMPPID::getIsRunningThroughCreator()
+{
+    if (IS_INITIALIZED) return IS_RUNNING_THROUGH_CREATOR;
+
+    pid_t mpid = getpid();
+    qDebug() << "MPPID::getIsRunningThroughCreator - mpid" << mpid;
+    pid_t ppid = getParentPID(mpid);
+    qDebug() << "MPPID::getIsRunningThroughCreator - ppid" << ppid;
+
+    QString name;
+    int ret = getProcessName(ppid, name);
+    qDebug() << "MPPID::getIsRunningThroughCreator - ret" << ret;
+    qDebug() << "MPPID::getIsRunningThroughCreator - name" << name;
+
+    IS_RUNNING_THROUGH_CREATOR = name.contains("qtcreator_process", Qt::CaseInsensitive);
+    IS_INITIALIZED = true;
+
+    return IS_RUNNING_THROUGH_CREATOR;
+}
+
+#endif
